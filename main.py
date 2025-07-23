@@ -1,53 +1,30 @@
 import os
-import tkinter as tk
-from tkinter import filedialog, messagebox
-from pytube import YouTube
-import subprocess
+import urllib.request
+import zipfile
 
-def download_video():
-    url = url_entry.get()
-    only_audio = audio_var.get()
-    if not url:
-        messagebox.showerror("Error", "Please enter a YouTube URL")
+def download_ffmpeg():
+    ffmpeg_url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+    ffmpeg_zip = "ffmpeg.zip"
+    ffmpeg_exe_path = "ffmpeg.exe"
+
+    # Check if ffmpeg.exe already exists
+    if os.path.isfile(ffmpeg_exe_path):
+        print("ffmpeg.exe found.")
         return
 
-    try:
-        yt = YouTube(url)
-        if only_audio:
-            stream = yt.streams.filter(only_audio=True).first()
-        else:
-            stream = yt.streams.get_highest_resolution()
+    print("Downloading ffmpeg...")
+    urllib.request.urlretrieve(ffmpeg_url, ffmpeg_zip)
 
-        output_path = filedialog.askdirectory(title="Select Download Folder")
-        if not output_path:
-            return
+    print("Extracting ffmpeg...")
+    with zipfile.ZipFile(ffmpeg_zip, 'r') as zip_ref:
+        for file in zip_ref.namelist():
+            if file.endswith("ffmpeg.exe") and "bin/" in file:
+                zip_ref.extract(file, ".")
+                os.rename(file, ffmpeg_exe_path)
+                break
 
-        downloaded_file = stream.download(output_path=output_path)
+    os.remove(ffmpeg_zip)
+    print("ffmpeg.exe downloaded and ready.")
 
-        if only_audio:
-            base, ext = os.path.splitext(downloaded_file)
-            mp3_file = base + ".mp3"
-            ffmpeg_path = os.path.join(os.getcwd(), "ffmpeg.exe")
-
-            command = [ffmpeg_path, "-i", downloaded_file, mp3_file]
-            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            os.remove(downloaded_file)
-
-        messagebox.showinfo("Success", "Download completed!")
-    except Exception as e:
-        messagebox.showerror("Error", str(e))
-
-app = tk.Tk()
-app.title("SH Downloader")
-app.geometry("400x200")
-
-tk.Label(app, text="YouTube URL:").pack(pady=10)
-url_entry = tk.Entry(app, width=50)
-url_entry.pack()
-
-audio_var = tk.BooleanVar()
-tk.Checkbutton(app, text="Audio Only (MP3)", variable=audio_var).pack()
-
-tk.Button(app, text="Download", command=download_video).pack(pady=20)
-
-app.mainloop()
+# Call it at the start of the script
+download_ffmpeg()
